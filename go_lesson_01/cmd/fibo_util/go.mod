@@ -1,4 +1,4 @@
-module go_core/go_lesson_01/fibo_util
+module go_core/go_lesson_01/main
 
 go 1.15
 
