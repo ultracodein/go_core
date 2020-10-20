@@ -15,25 +15,29 @@ func main() {
 	storage := make(map[string]string)
 	collectData(urls, depth, storage)
 
+	// получаем значение поисковой строки из аргумента
+	// и проставляем флаг, если строка была получена именно таким способом
+	var recvCmdArg = false
 	search := parseSearchPhrase()
+	if search != "" {
+		recvCmdArg = true
+	}
 
 	for {
-		var input = search
-
-		// если поисковая строка не была передана при запуске приложения
+		// если поисковая строка не была получена из аргумента
 		// или была указана пустой - запрашиваем ее у пользователя
-		if input == "" {
+		if search == "" {
 			fmt.Print("Enter search phrase and press ENTER to search ")
 			fmt.Print("(or just press ENTER to exit): ")
-			fmt.Scanln(&input)
+			fmt.Scanln(&search)
 
 			// если пользователь ничего не указал - выходим из приложения
-			if input == "" {
+			if search == "" {
 				break
 			}
 		}
 
-		found := findRelatedPages(storage, input)
+		found := findRelatedPages(storage, search)
 
 		fmt.Println("Pages found:")
 		if len(found) > 0 {
@@ -44,11 +48,15 @@ func main() {
 			fmt.Println("Nothing.")
 		}
 
-		// если поисковая строка была передана при запуске приложения
+		// если поисковая строка была получена из аргумента,
 		// то дальнейший интерактив не требуется - выходим из приложения
-		if search != "" {
+		if recvCmdArg {
 			break
 		}
+
+		// сбрасываем значение поисковой строки
+		// для выдачи запроса на ее ввод в следующей итерации
+		search = ""
 	}
 }
 
@@ -70,7 +78,6 @@ func collectData(urls []string, depth int, storage map[string]string) {
 		fmt.Printf("Scanning URL #%d: %s\n", i+1, url)
 
 		data, err := spider.Scan(url, depth)
-
 		if err != nil {
 			continue
 		}
@@ -87,7 +94,6 @@ func findRelatedPages(storage map[string]string, search string) (found []string)
 	found = []string{}
 	escapedSearch := "(?i)" + regexp.QuoteMeta(search)
 	searchRegEx, err := regexp.Compile(escapedSearch)
-
 	if err != nil {
 		return
 	}
