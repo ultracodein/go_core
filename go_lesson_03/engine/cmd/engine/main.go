@@ -1,19 +1,26 @@
 package main
 
 import (
-	"crawler/pkg/spider"
+	"engine/pkg/scanners/base"
 	"flag"
 	"fmt"
 	"regexp"
 )
 
+// Scanner описывает универсальный интерфейс
+// сканирования веб-страниц с заданной глубиной
+type Scanner interface {
+	Scan(url string, depth int) (data map[string]string, err error)
+}
+
 func main() {
 	urls := []string{"https://habr.com/", "https://www.cnews.ru/"}
 	const depth int = 2
+	var scn base.SiteScanner
 
 	fmt.Printf("Today we have %d sites to scan!\n", len(urls))
 	storage := make(map[string]string)
-	collectData(urls, depth, storage)
+	collectData(scn, urls, depth, storage)
 
 	// получаем значение поисковой строки из аргумента
 	// и проставляем флаг, если строка была получена именно таким способом
@@ -73,11 +80,11 @@ func parseSearchPhrase() string {
 }
 
 // collectData накапливает в словаре ссылки/заголовки страниц с загруженных сайтов
-func collectData(urls []string, depth int, storage map[string]string) {
+func collectData(scn Scanner, urls []string, depth int, storage map[string]string) {
 	for i, url := range urls {
 		fmt.Printf("Scanning URL #%d: %s\n", i+1, url)
 
-		data, err := spider.Scan(url, depth)
+		data, err := scn.Scan(url, depth)
 		if err != nil {
 			continue
 		}
