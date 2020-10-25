@@ -1,13 +1,14 @@
 package main
 
 import (
+	"engine/pkg/scanners/mock"
 	"reflect"
 	"testing"
 )
 
 func Test_collectData(t *testing.T) {
-	urls := []string{"https://habr.com/", "https://www.cnews.ru/"}
-	var depth int = 1
+	var urls = []string{"https://habr.com/", "https://www.cnews.ru/"}
+	const depth int = 999
 
 	var want = map[string]string{
 		"https://habr.com/":     "Лучшие публикации за сутки / Хабр",
@@ -15,7 +16,9 @@ func Test_collectData(t *testing.T) {
 	}
 
 	var got = make(map[string]string)
-	collectData(urls, depth, got)
+	var scn mock.FakeScanner
+
+	collectData(scn, urls, depth, got)
 
 	if !reflect.DeepEqual(want, got) {
 		t.Fatal("storage is not equal to wanted")
