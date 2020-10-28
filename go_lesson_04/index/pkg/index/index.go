@@ -25,7 +25,7 @@ type Storage struct {
 // Find формирует отчет о результатах поиска указанного слова
 // (содержит ID и Title документа, в которых было найдено указанное слово)
 func (s *Storage) Find(word string) string {
-	docs, found := s.Reverse[word]
+	docs, found := s.Reverse[strings.ToLower(word)]
 	if !found {
 		return "Nothing.\n"
 	}
