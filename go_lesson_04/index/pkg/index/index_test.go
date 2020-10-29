@@ -43,33 +43,13 @@ func TestStorage_addNewWords(t *testing.T) {
 	var doc = crawler.Document{
 		ID:    1,
 		URL:   "https://site.com",
-		Title: "Слово1 Слово2 Слово1 Слово3",
-	}
-
-	want := map[string][]int{
-		"cлово1": []int{1},
-		"cлово2": []int{1},
-		"cлово3": []int{1},
+		Title: "Слово1 Слово2 Слово1",
 	}
 
 	store.addNewWords(doc)
 	got := store.Reverse
 
-	if len(want) != len(got) {
+	if len(got) != 2 {
 		t.Fatal("invalid word splitting")
-	}
-
-	for k := range want {
-		gotIds, ok := want[k]
-
-		if !ok {
-			t.Fatal("different indexes")
-		}
-
-		for i := 0; i < len(want[k]); i++ {
-			if want[k][i] != gotIds[i] {
-				t.Fatal("found duplicates")
-			}
-		}
 	}
 }
