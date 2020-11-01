@@ -1,0 +1,75 @@
+package list
+
+import (
+	"fmt"
+)
+
+// Пакет реализует двусвязный список вместе с базовыми операциями над ним.
+
+// List - двусвязный список.
+type List struct {
+	root Elem
+}
+
+// Elem - элемент списка.
+type Elem struct {
+	Val        interface{}
+	next, prev *Elem
+}
+
+// New - конструктор нового списка.
+func New() *List {
+	var l List
+	l.root.next = &l.root
+	l.root.prev = &l.root
+	return &l
+}
+
+// Push вставляет элемент в начало списка.
+func (l *List) Push(e Elem) *Elem {
+	e.prev = &l.root
+	e.next = l.root.next
+	l.root.next = &e
+	if e.next != &l.root {
+		e.next.prev = &e
+	}
+	return &e
+}
+
+// String реализует интерфейс fmt.Stringer представляя список в виде строки.
+func (l *List) String() string {
+	el := l.root.next
+	var s string
+	for el != &l.root {
+		s += fmt.Sprintf("%v ", el.Val)
+		el = el.next
+	}
+	if len(s) > 0 {
+		s = s[:len(s)-1]
+	}
+	return s
+}
+
+// Pop удаляет первый элемент списка.
+func (l *List) Pop() *List {
+	newTop := l.root.next.next
+	newTop.prev = &l.root
+	l.root.next = newTop
+	return l
+}
+
+// Reverse разворачивает список.
+func (l *List) Reverse() *List {
+	el := l.root.next
+	for {
+		oldPrev := el.prev
+		el.prev = el.next
+		el.next = oldPrev
+		if el.prev == &l.root {
+			break
+		}
+		el = el.prev
+	}
+	l.root.next = el
+	return l
+}
