@@ -12,7 +12,7 @@ import (
 	"gosearch/pkg/index"
 	"gosearch/pkg/index/hash"
 	"gosearch/pkg/storage"
-	"gosearch/pkg/storage/memstore"
+	"gosearch/pkg/storage/bststore"
 )
 
 // Сервер Интернет-поисковика GoSearch.
@@ -37,10 +37,10 @@ func new() *gosearch {
 	gs := gosearch{}
 	gs.scanner = spider.New()
 	gs.index = hash.New()
-	gs.storage = memstore.New()
+	gs.storage = bststore.New()
 	gs.engine = engine.New(gs.index, gs.storage)
-	gs.sites = []string{"https://habr.com", "https://cnews.ru/"}
-	gs.depth = 1
+	gs.sites = []string{"https://www.ixbt.com/", "https://habr.com/"}
+	gs.depth = 2
 	return &gs
 }
 

@@ -15,3 +15,8 @@ type Document struct {
 	Title string
 	Body  string
 }
+
+// Value возвращает ID документа
+func (d *Document) Value() int {
+	return d.ID
+}
