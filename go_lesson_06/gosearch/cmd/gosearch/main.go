@@ -52,7 +52,6 @@ func new() *gosearch {
 		"storage": "storage.bin",
 	}
 	gs.cache = bstcache.New(gs.cacheFiles)
-	gs.engine = engine.New(gs.index, gs.storage)
 	gs.sites = []string{"https://www.ixbt.com/", "https://habr.com/"}
 	gs.depth = 2
 	return &gs
@@ -77,9 +76,7 @@ func (gs *gosearch) loadCache() {
 		log.Println(err)
 	}
 
-	gs.index = *ind
-	gs.storage = *str
-	gs.engine = engine.New(gs.index, gs.storage)
+	gs.engine = engine.New(*ind, *str)
 }
 
 // saveCache сохраняет индекс и хранилище в кэш
@@ -114,6 +111,7 @@ func (gs *gosearch) init() {
 			continue
 		}
 	}
+	gs.engine = engine.New(gs.index, gs.storage)
 }
 
 // run выполняет поиск документов
