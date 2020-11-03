@@ -24,6 +24,10 @@ func New() *Index {
 // Потом проверяется наличие номера документа в значении словаря для лексемы.
 // Если номер документа не найден, то он добавляется в значение словаря.
 func (index *Index) Add(docs []crawler.Document) {
+	if docs == nil {
+		return
+	}
+
 	for _, doc := range docs {
 		foundTokens := tokens(doc.Title)
 		if foundTokens == nil {

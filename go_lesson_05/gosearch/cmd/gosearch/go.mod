@@ -10,7 +10,7 @@ replace (
 	gosearch/pkg/index => ../../pkg/index
 	gosearch/pkg/index/hash => ../../pkg/index/hash
 	gosearch/pkg/storage => ../../pkg/storage
-	gosearch/pkg/storage/memstore => ../../pkg/storage/memstore
+	gosearch/pkg/storage/bststore => ../../pkg/storage/bststore
 )
 
 require (
@@ -21,5 +21,5 @@ require (
 	gosearch/pkg/index v0.0.0-00010101000000-000000000000
 	gosearch/pkg/index/hash v0.0.0-00010101000000-000000000000
 	gosearch/pkg/storage v0.0.0-00010101000000-000000000000
-	gosearch/pkg/storage/memstore v0.0.0-00010101000000-000000000000
+	gosearch/pkg/storage/bststore v0.0.0-00010101000000-000000000000
 )

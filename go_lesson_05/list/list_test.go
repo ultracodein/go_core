@@ -13,6 +13,7 @@ func TestList_Push(t *testing.T) {
 	l := New()
 	l.Push(Elem{Val: 2})
 	l.Push(Elem{Val: 1})
+
 	got := l.String()
 	want := "1 2"
 	if got != want {
@@ -21,7 +22,6 @@ func TestList_Push(t *testing.T) {
 }
 
 func TestList_Pop(t *testing.T) {
-
 	l := New()
 	l.Push(Elem{Val: 3})
 	l.Push(Elem{Val: 2})
