@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"gosearch/pkg/cache"
 	"gosearch/pkg/cache/bstcache"
@@ -125,6 +126,11 @@ func (gs *gosearch) searchLoop() {
 	}
 
 	for {
+		if gs.engine == nil {
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
 		// если поисковая строка не была получена из аргумента
 		// или была указана пустой - запрашиваем ее у пользователя
 		if word == "" {
