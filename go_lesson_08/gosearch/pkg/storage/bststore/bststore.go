@@ -1,7 +1,6 @@
 package bststore
 
 import (
-	"fmt"
 	"gosearch/pkg/crawler"
 )
 
@@ -60,8 +59,8 @@ func (db *DB) StoreDocs(docs []crawler.Document) error {
 func (db *DB) Docs(ids []int) []crawler.Document {
 	var result []crawler.Document
 	for _, id := range ids {
-		vtx, err := db.Tree.Find(id)
-		if err != nil {
+		vtx := db.Tree.Find(id)
+		if vtx == nil {
 			continue
 		}
 		item := *vtx.Item
@@ -123,16 +122,12 @@ func (t *Tree) Insert(e Evaluator) {
 }
 
 // Find осуществляет поиск вершины по указанному значению
-func (t *Tree) Find(value int) (*Vertex, error) {
-	if t.Root == nil {
-		return t.Root, fmt.Errorf("поиск невозможен - в дереве отсутствуют вершины")
-	}
-
+func (t *Tree) Find(value int) *Vertex {
 	var next = t.Root
 
 	for {
 		if next.Value == value {
-			return next, nil
+			return next
 		}
 
 		var moveLeft = value < next.Value
@@ -140,7 +135,7 @@ func (t *Tree) Find(value int) (*Vertex, error) {
 
 		if moveLeft {
 			if next.L == nil {
-				return next, fmt.Errorf("значение не найдено")
+				return nil
 			}
 			next = next.L
 			continue
@@ -148,7 +143,7 @@ func (t *Tree) Find(value int) (*Vertex, error) {
 
 		if moveRight {
 			if next.R == nil {
-				return next, fmt.Errorf("значение не найдено")
+				return nil
 			}
 			next = next.R
 			continue
