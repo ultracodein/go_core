@@ -23,13 +23,13 @@ func TestScheduler_UpdateHistory(t *testing.T) {
 	s := initScheduler()
 
 	oldTime := s.History["site1.com"]
-	s.UpdateHistory("site1.com")
+	s.UpdateHistory([]string{"site1.com"})
 	newTime := s.History["site1.com"]
 	if newTime.Sub(oldTime) <= 0 {
 		t.Fatalf("time not updated")
 	}
 
-	s.UpdateHistory("site2.com")
+	s.UpdateHistory([]string{"site2.com"})
 	newTime = s.History["site2.com"]
 	if (newTime.Sub(oldTime) <= 0) || (len(s.History) != 2) {
 		t.Fatalf("new site not added")
@@ -39,7 +39,7 @@ func TestScheduler_UpdateHistory(t *testing.T) {
 func TestScheduler_ExpiredSites(t *testing.T) {
 	s := initScheduler()
 
-	s.UpdateHistory("site2.com")
+	s.UpdateHistory([]string{"site2.com"})
 	expired := s.ExpiredSites()
 	if len(expired) != 1 {
 		t.Fatalf("initial site not returned")

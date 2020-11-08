@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -29,6 +28,7 @@ type gosearch struct {
 	cache     cache.Interface
 	scheduler *scheduler.Service
 
+	started       bool
 	cacheFiles    map[string]string
 	schedulerFile string
 	sites         []string
@@ -37,12 +37,87 @@ type gosearch struct {
 
 func main() {
 	server := new()
-	server.loadCache()
-	go func() {
-		server.init()
-		server.saveCache()
-	}()
+	server.tryStartWithCache()
+
+	// если есть устаревшие сайты - сканируем их и обновляем данные
+	expired := server.scheduler.ExpiredSites()
+	if len(expired) > 0 {
+		go func() {
+			server.updateDataByScan(expired)
+		}()
+	}
+
+	// дожидаемся инициализации поискового движка
+	for {
+		if !server.started {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		break
+	}
+
 	server.searchLoop()
+}
+
+// tryStartWithCache загружает индекс и хранилище из файлов и запускает поисковый движок на них
+func (gs *gosearch) tryStartWithCache() {
+	cachedIndex, cachedStorage, err := gs.loadCache()
+	if err != nil {
+		log.Println("При загрузке данных из кэша произошла ошибка:", err)
+		return
+	}
+
+	gs.index = cachedIndex
+	gs.storage = cachedStorage
+	gs.engine = engine.New(gs.index, gs.storage)
+	gs.started = true
+}
+
+// updateDataByScan обновляет индекс и хранилище, инициализирует поисковый движок,
+// сохраняет обновленные данные и состояние планировщика в файлы
+func (gs *gosearch) updateDataByScan(sites []string) {
+	fmt.Println("Идет сканирование сайтов. Пожалуйста, подождите...")
+	scanned := gs.updateIndexByScan(sites)
+	gs.scheduler.UpdateHistory(scanned)
+	if gs.engine == nil {
+		gs.engine = engine.New(gs.index, gs.storage)
+	}
+	gs.started = true
+
+	err := gs.saveCache()
+	if err != nil {
+		log.Println("При сохранении данных в кэш произошла ошибка:", err)
+		return
+	}
+
+	err = gs.scheduler.SaveTo(gs.schedulerFile)
+	if err != nil {
+		log.Println("При сохранении состояния планировщика произошла ошибка:", err)
+	}
+}
+
+// updateIndexByScan выполняет сканирование сайтов и индексирование данных
+func (gs *gosearch) updateIndexByScan(sites []string) (scanned []string) {
+	scanned = make([]string, 0)
+	id := 0
+	for _, site := range sites {
+		log.Println("Сайт:", site)
+		data, err := gs.scanner.Scan(site, gs.depth)
+		if err != nil {
+			continue
+		}
+		for i := range data {
+			data[i].ID = id
+			id++
+		}
+		gs.index.Add(data)
+		err = gs.storage.StoreDocs(data)
+		if err != nil {
+			continue
+		}
+		scanned = append(scanned, site)
+	}
+	return scanned
 }
 
 // new создаёт объект и службы сервера и возвращает указатель на него.
@@ -75,110 +150,44 @@ func (gs *gosearch) initScheduler() *scheduler.Service {
 }
 
 // loadCache загружает индекс и хранилище из кэша (если он есть)
-func (gs *gosearch) loadCache() {
+func (gs *gosearch) loadCache() (index.Interface, storage.Interface, error) {
 	_, err := os.Stat(gs.cacheFiles["index"])
 	if err != nil {
-		log.Println("Кэш не найден.")
-		return
+		return nil, nil, err
 	}
 	_, err = os.Stat(gs.cacheFiles["storage"])
 	if err != nil {
-		log.Println("Кэш не найден.")
-		return
+		return nil, nil, err
 	}
-
-	log.Println("Загрузка данных из кэша.")
 	ind, str, err := gs.cache.Load()
 	if err != nil {
-		log.Println(err)
+		return nil, nil, err
 	}
-
-	gs.index = *ind
-	gs.storage = *str
-	gs.engine = engine.New(*ind, *str)
+	return *ind, *str, nil
 }
 
 // saveCache сохраняет индекс и хранилище в кэш
-func (gs *gosearch) saveCache() {
-	log.Println("Сохранение данных в кэш.")
-	err := gs.cache.Create(&gs.index, &gs.storage)
-	if err != nil {
-		log.Println(err)
-	}
+func (gs *gosearch) saveCache() error {
+	return gs.cache.Create(&gs.index, &gs.storage)
 }
 
-// init производит сканирование сайтов и индексирование данных.
-func (gs *gosearch) init() {
-	sites := gs.scheduler.ExpiredSites()
-	if len(sites) > 0 {
-		log.Println("Сканирование сайтов.")
-	}
-	id := 0
-	for _, url := range sites {
-		log.Println("Сайт:", url)
-		data, err := gs.scanner.Scan(url, gs.depth)
-		if err != nil {
-			continue
-		}
-		for i := range data {
-			data[i].ID = id
-			id++
-		}
-		log.Println("Индексирование документов.")
-		gs.index.Add(data)
-		log.Println("Сохранение документов.")
-		err = gs.storage.StoreDocs(data)
-		if err != nil {
-			log.Println("ошибка при добавлении документов в хранилище:", err)
-			continue
-		}
-		gs.scheduler.UpdateHistory(url)
-	}
-	if len(sites) > 0 {
-		gs.scheduler.SaveTo(gs.schedulerFile)
-	}
-	gs.engine = engine.New(gs.index, gs.storage)
-}
-
-// run выполняет поиск документов
+// searchLoop выполняет поиск документов
 func (gs *gosearch) searchLoop() {
-	// получаем значение поисковой строки из аргумента
-	// и проставляем флаг, если строка была получена именно таким способом
-	var fromCmd = false
-	word := parseSearchWord()
-	if word != "" {
-		fromCmd = true
-	}
-
 	for {
-		if gs.engine == nil {
-			time.Sleep(10 * time.Second)
-			continue
-		}
-
-		// если поисковая строка не была получена из аргумента
-		// или была указана пустой - запрашиваем ее у пользователя
+		// запрашиваем у пользователя слово для поиска
+		var word string
+		fmt.Print("Enter word and press ENTER: ")
+		fmt.Scanln(&word)
+		// если пользователь ничего не указал - выходим из приложения
 		if word == "" {
-			fmt.Print("Enter word and press ENTER: ")
-			fmt.Scanln(&word)
-			// если пользователь ничего не указал - выходим из приложения
-			if word == "" {
-				break
-			}
+			break
 		}
 
 		docs := gs.engine.Search(word)
 		text := genOutput(docs)
 		fmt.Print(text)
 
-		// если поисковая строка была получена из аргумента,
-		// то дальнейший интерактив не требуется - выходим из приложения
-		if fromCmd {
-			break
-		}
-
-		// сбрасываем значение поисковой строки
-		// для выдачи запроса на ее ввод в следующей итерации
+		// сбрасываем значение для выдачи запроса на ввод слова в следующей итерации
 		word = ""
 	}
 }
@@ -193,11 +202,4 @@ func genOutput(docs []crawler.Document) string {
 		text += "[" + strconv.Itoa(doc.ID) + "] " + doc.Title + "\n"
 	}
 	return text
-}
-
-// parseSearchWord возвращает слово для поиска, переданное в виде флага при запуске приложения
-func parseSearchWord() string {
-	searchPtr := flag.String("search", "", "word to search in page title")
-	flag.Parse()
-	return *searchPtr
 }

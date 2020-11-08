@@ -26,8 +26,10 @@ func New(sites []string, expdays int) *Service {
 }
 
 // UpdateHistory обновляет даты сканирования сайтов в истории
-func (s *Service) UpdateHistory(site string) {
-	s.History[site] = time.Now().Truncate(time.Hour * 24)
+func (s *Service) UpdateHistory(sites []string) {
+	for _, site := range sites {
+		s.History[site] = time.Now().Truncate(time.Hour * 24)
+	}
 }
 
 // ExpiredSites возвращает устаревшие сайты
