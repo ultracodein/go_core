@@ -28,7 +28,8 @@ type gosearch struct {
 	cache     cache.Interface
 	scheduler *scheduler.Service
 
-	started       bool
+	initDone      bool
+	initError     error
 	cacheFiles    map[string]string
 	schedulerFile string
 	sites         []string
@@ -37,7 +38,7 @@ type gosearch struct {
 
 func main() {
 	server := new()
-	server.tryStartWithCache()
+	server.tryInitWithCache()
 
 	// если есть устаревшие сайты - сканируем их и обновляем данные
 	expired := server.scheduler.ExpiredSites()
@@ -47,20 +48,25 @@ func main() {
 		}()
 	}
 
-	// дожидаемся инициализации поискового движка
+	// дожидаемся завершения инициализации поискового движка
 	for {
-		if !server.started {
+		if !server.initDone {
 			time.Sleep(5 * time.Second)
 			continue
 		}
 		break
 	}
 
+	if server.initError != nil {
+		fmt.Println("Ошибка инициализации поискового движка! Функционал поиска недоступен.")
+		return
+	}
+
 	server.searchLoop()
 }
 
-// tryStartWithCache загружает индекс и хранилище из файлов и запускает поисковый движок на них
-func (gs *gosearch) tryStartWithCache() {
+// tryInitWithCache загружает индекс и хранилище из файлов и запускает поисковый движок на них
+func (gs *gosearch) tryInitWithCache() {
 	cachedIndex, cachedStorage, err := gs.loadCache()
 	if err != nil {
 		log.Println("При загрузке данных из кэша произошла ошибка:", err)
@@ -70,7 +76,7 @@ func (gs *gosearch) tryStartWithCache() {
 	gs.index = cachedIndex
 	gs.storage = cachedStorage
 	gs.engine = engine.New(gs.index, gs.storage)
-	gs.started = true
+	gs.initDone = true
 }
 
 // updateDataByScan обновляет индекс и хранилище, инициализирует поисковый движок,
@@ -79,21 +85,25 @@ func (gs *gosearch) updateDataByScan(sites []string) {
 	fmt.Println("Идет сканирование сайтов. Пожалуйста, подождите...")
 	scanned := gs.updateIndexByScan(sites)
 	gs.scheduler.UpdateHistory(scanned)
-	if gs.engine == nil {
-		gs.engine = engine.New(gs.index, gs.storage)
-	}
-	gs.started = true
 
 	err := gs.saveCache()
 	if err != nil {
 		log.Println("При сохранении данных в кэш произошла ошибка:", err)
+		gs.initError, gs.initDone = err, true
 		return
 	}
 
 	err = gs.scheduler.SaveTo(gs.schedulerFile)
 	if err != nil {
 		log.Println("При сохранении состояния планировщика произошла ошибка:", err)
+		gs.initError, gs.initDone = err, true
+		return
 	}
+
+	if gs.engine == nil {
+		gs.engine = engine.New(gs.index, gs.storage)
+	}
+	gs.initDone = true
 }
 
 // updateIndexByScan выполняет сканирование сайтов и индексирование данных
