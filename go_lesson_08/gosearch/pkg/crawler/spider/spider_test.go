@@ -35,7 +35,7 @@ func createFakeServer() *httptest.Server {
 	return srv
 }
 
-func Test_parse(t *testing.T) {
+func TestService_Scan(t *testing.T) {
 	srv := createFakeServer()
 	defer srv.Close()
 
