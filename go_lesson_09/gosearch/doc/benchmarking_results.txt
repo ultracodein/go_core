@@ -1,9 +1,17 @@
-btstore % go test -run=XXX -bench=. -benchmem
+% go test -run=XXX -bench=. -benchmem
 pkg: gosearch/pkg/storage/btstore
-BenchmarkDB_StoreDocs-12           36801            138527 ns/op             671 B/op          4 allocs/op
-BenchmarkDB_Docs-12              8225325               142 ns/op             176 B/op          2 allocs/op
+BenchmarkDB_StoreDocs1-12         164325            123786 ns/op             366 B/op          2 allocs/op
+BenchmarkDB_StoreDocs10-12         10000            328620 ns/op            3809 B/op         20 allocs/op
+BenchmarkDB_StoreDocs100-12        10000           5726113 ns/op           38653 B/op        200 allocs/op
+BenchmarkDB_Docs1-12             8508726               138 ns/op             176 B/op          2 allocs/op
+BenchmarkDB_Docs10-12            8257334               145 ns/op             176 B/op          2 allocs/op
+BenchmarkDB_Docs100-12           4828402               246 ns/op             176 B/op          2 allocs/op
 
-memstore % go test -run=XXX -bench=. -benchmem
+% go test -run=XXX -bench=. -benchmem
 pkg: gosearch/pkg/storage/memstore
-BenchmarkDB_StoreDocs-12           10000            782653 ns/op             670 B/op          3 allocs/op
-BenchmarkDB_Docs-12              7633803               152 ns/op             176 B/op          2 allocs/op
+BenchmarkDB_StoreDocs1-12          10000            330960 ns/op             397 B/op          3 allocs/op
+BenchmarkDB_StoreDocs10-12         10000           3529053 ns/op            3473 B/op          3 allocs/op
+BenchmarkDB_StoreDocs100-12         3928          12522976 ns/op           28293 B/op          3 allocs/op
+BenchmarkDB_Docs1-12             7980046               147 ns/op             176 B/op          2 allocs/op
+BenchmarkDB_Docs10-12            6605298               179 ns/op             176 B/op          2 allocs/op
+BenchmarkDB_Docs100-12           2502831               498 ns/op             176 B/op          2 allocs/op
