@@ -1,0 +1,9 @@
+btstore % go test -run=XXX -bench=. -benchmem
+pkg: gosearch/pkg/storage/btstore
+BenchmarkDB_StoreDocs-12           36801            138527 ns/op             671 B/op          4 allocs/op
+BenchmarkDB_Docs-12              8225325               142 ns/op             176 B/op          2 allocs/op
+
+memstore % go test -run=XXX -bench=. -benchmem
+pkg: gosearch/pkg/storage/memstore
+BenchmarkDB_StoreDocs-12           10000            782653 ns/op             670 B/op          3 allocs/op
+BenchmarkDB_Docs-12              7633803               152 ns/op             176 B/op          2 allocs/op
