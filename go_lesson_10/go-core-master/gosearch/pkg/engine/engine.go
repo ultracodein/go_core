@@ -27,8 +27,8 @@ type Service struct {
 // rate(engine_query_len_sum[5m])/rate(engine_query_len_count[5m]) - средняя длина за последние 5 минут
 var averageQueryLen = promauto.NewHistogram(prometheus.HistogramOpts{
 	Name:    "engine_query_len",
-	Help:    "Длина поискового запроса, Байт.",
-	Buckets: prometheus.LinearBuckets(0, 1, 50),
+	Help:    "Длина поискового запроса, байт.",
+	Buckets: prometheus.LinearBuckets(1, 1, 50),
 })
 
 // New - конструктор.
@@ -45,7 +45,7 @@ func (s *Service) Search(query string) []crawler.Document {
 	if query == "" {
 		return nil
 	}
-	averageQueryLen.Observe((float64(len([]byte(query)))))
+	averageQueryLen.Observe((float64(len(query))))
 	ids := s.index.Search(query)
 	docs := s.storage.Docs(ids)
 	return docs

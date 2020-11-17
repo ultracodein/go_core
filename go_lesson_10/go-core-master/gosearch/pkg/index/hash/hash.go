@@ -14,7 +14,7 @@ type Index struct {
 }
 
 // index_words_total - для просмотра метрики
-var wordsInIndexTotal = promauto.NewCounter(prometheus.CounterOpts{
+var wordsInIndexTotal = promauto.NewGauge(prometheus.GaugeOpts{
 	Name: "index_words_total",
 	Help: "Количество слов в индексе.",
 })
@@ -36,7 +36,7 @@ func (index *Index) Add(docs []crawler.Document) {
 		for _, token := range tokens(doc.Title) {
 			if !exists(index.data[token], doc.ID) {
 				index.data[token] = append(index.data[token], doc.ID)
-				wordsInIndexTotal.Inc()
+				wordsInIndexTotal.Set(float64(len(index.data)))
 			}
 		}
 	}
