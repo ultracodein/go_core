@@ -4,7 +4,16 @@ import (
 	"gosearch/pkg/crawler"
 	"sort"
 	"sync"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
+
+// storage_docs_total - для просмотра метрики
+var docsInStorageTotal = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "storage_docs_total",
+	Help: "Количество документов в хранилище.",
+})
 
 // DB - хранилище данных
 type DB struct {
@@ -23,6 +32,7 @@ func New() *DB {
 // StoreDocs обавляет новые документы.
 func (db *DB) StoreDocs(docs []crawler.Document) error {
 	db.docs = append(db.docs, docs...)
+	docsInStorageTotal.Add(float64(len(docs)))
 	sort.Slice(db.docs, func(i, j int) bool { return db.docs[i].ID > db.docs[j].ID })
 	return nil
 }

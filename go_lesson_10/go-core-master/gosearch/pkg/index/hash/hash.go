@@ -3,12 +3,21 @@ package hash
 import (
 	"gosearch/pkg/crawler"
 	"strings"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 // Index - индекс на основе хэш-таблицы.
 type Index struct {
 	data map[string][]int
 }
+
+// index_words_total - для просмотра метрики
+var wordsInIndexTotal = promauto.NewGauge(prometheus.GaugeOpts{
+	Name: "index_words_total",
+	Help: "Количество слов в индексе.",
+})
 
 // New - конструктор.
 func New() *Index {
@@ -27,6 +36,7 @@ func (index *Index) Add(docs []crawler.Document) {
 		for _, token := range tokens(doc.Title) {
 			if !exists(index.data[token], doc.ID) {
 				index.data[token] = append(index.data[token], doc.ID)
+				wordsInIndexTotal.Set(float64(len(index.data)))
 			}
 		}
 	}
