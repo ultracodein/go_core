@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -92,8 +93,18 @@ func (gs *gosearch) initWithCache() error {
 // сохраняет обновленные данные и состояние планировщика в файлы
 func (gs *gosearch) updateDataByScan(sites []string, ch chan error) {
 	fmt.Println("Идет сканирование сайтов. Пожалуйста, подождите...")
-	scanned := gs.updateIndexByScan(sites)
 
+	scanErrors, storeError := gs.updateIndexByScan(sites)
+	if scanErrors != nil && len(scanErrors) == len(sites) {
+		ch <- errors.New("ни один из сайтов не отсканирован")
+		return
+	}
+	if storeError != nil {
+		ch <- storeError
+		return
+	}
+
+	scanned := getScannedSites(sites, scanErrors)
 	err := gs.saveCacheAndHistory(scanned)
 	if err != nil {
 		ch <- err
@@ -106,28 +117,44 @@ func (gs *gosearch) updateDataByScan(sites []string, ch chan error) {
 	ch <- nil
 }
 
-// updateIndexByScan выполняет сканирование сайтов и индексирование данных
-func (gs *gosearch) updateIndexByScan(sites []string) (scanned []string) {
-	scanned = make([]string, 0)
-	id := 0
-	for _, site := range sites {
-		log.Println("Сайт:", site)
-		data, err := gs.scanner.Scan(site, gs.depth)
-		if err != nil {
-			continue
+func getScannedSites(sites []string, scanErrors map[string]error) (scanned []string) {
+	if scanErrors == nil {
+		scanned = sites
+	} else {
+		scanned := make([]string, 0)
+		errorSites := make([]string, 0, len(scanErrors))
+
+		for s := range scanErrors {
+			errorSites = append(errorSites, s)
 		}
-		for i := range data {
-			data[i].ID = id
-			id++
+		for _, site := range sites {
+			if !spider.SliceContains(errorSites, site) {
+				scanned = append(scanned, site)
+			}
 		}
-		gs.index.Add(data)
-		err = gs.storage.StoreDocs(data)
-		if err != nil {
-			continue
-		}
-		scanned = append(scanned, site)
 	}
 	return scanned
+}
+
+// updateIndexByScan выполняет сканирование сайтов и индексирование данных
+func (gs *gosearch) updateIndexByScan(sites []string) (scanErrors map[string]error, storeError error) {
+	data, scanErrors := gs.scanner.Scan(sites, gs.depth)
+	if scanErrors != nil {
+		return scanErrors, nil
+	}
+
+	id := 0
+	for i := range data {
+		data[i].ID = id
+		id++
+	}
+	gs.index.Add(data)
+	storeError = gs.storage.StoreDocs(data)
+	if storeError != nil {
+		return nil, storeError
+	}
+
+	return scanErrors, storeError
 }
 
 func (gs *gosearch) saveCacheAndHistory(scanned []string) error {

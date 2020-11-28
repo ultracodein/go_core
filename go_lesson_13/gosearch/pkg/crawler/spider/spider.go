@@ -3,6 +3,7 @@
 package spider
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -22,17 +23,27 @@ func New() *Service {
 
 // Scan осуществляет рекурсивный обход ссылок сайта, указанного в URL,
 // с учётом глубины перехода по ссылкам, переданной в depth.
-func (s *Service) Scan(url string, depth int) (data []crawler.Document, err error) {
-	pages := make(map[string]string)
+func (s *Service) Scan(urls []string, depth int) (data []crawler.Document, errors map[string]error) {
+	errors = make(map[string]error)
 
-	parse(url, url, depth, pages)
+	for _, url := range urls {
+		fmt.Printf("Идет сканирование %s\n", url)
+		pages := make(map[string]string)
 
-	for url, title := range pages {
-		item := crawler.Document{
-			URL:   url,
-			Title: title,
+		err := parse(url, url, depth, pages)
+
+		if err != nil {
+			errors[url] = err
+			continue
 		}
-		data = append(data, item)
+
+		for url, title := range pages {
+			item := crawler.Document{
+				URL:   url,
+				Title: title,
+			}
+			data = append(data, item)
+		}
 	}
 
 	return data, nil
@@ -101,7 +112,7 @@ func pageLinks(links []string, n *html.Node) []string {
 	if n.Type == html.ElementNode && n.Data == "a" {
 		for _, a := range n.Attr {
 			if a.Key == "href" {
-				if !sliceContains(links, a.Val) {
+				if !SliceContains(links, a.Val) {
 					links = append(links, a.Val)
 				}
 			}
@@ -113,8 +124,8 @@ func pageLinks(links []string, n *html.Node) []string {
 	return links
 }
 
-// sliceContains возвращает true если массив содержит переданное значение
-func sliceContains(slice []string, value string) bool {
+// SliceContains возвращает true если массив содержит переданное значение
+func SliceContains(slice []string, value string) bool {
 	for _, v := range slice {
 		if v == value {
 			return true
