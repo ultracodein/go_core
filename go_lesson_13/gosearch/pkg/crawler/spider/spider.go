@@ -3,51 +3,11 @@
 package spider
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
 	"golang.org/x/net/html"
-
-	"gosearch/pkg/crawler"
 )
-
-// Service - служба поискового робота.
-type Service struct{}
-
-// New - констрктор службы поискового робота.
-func New() *Service {
-	s := Service{}
-	return &s
-}
-
-// Scan осуществляет рекурсивный обход ссылок сайта, указанного в URL,
-// с учётом глубины перехода по ссылкам, переданной в depth.
-func (s *Service) Scan(urls []string, depth int) (data []crawler.Document, errors map[string]error) {
-	errors = make(map[string]error)
-
-	for _, url := range urls {
-		fmt.Printf("Идет сканирование %s\n", url)
-		pages := make(map[string]string)
-
-		err := parse(url, url, depth, pages)
-
-		if err != nil {
-			errors[url] = err
-			continue
-		}
-
-		for url, title := range pages {
-			item := crawler.Document{
-				URL:   url,
-				Title: title,
-			}
-			data = append(data, item)
-		}
-	}
-
-	return data, nil
-}
 
 // parse рекурсивно обходит ссылки на странице, переданной в url.
 // Глубина рекурсии задаётся в depth.
