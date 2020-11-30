@@ -27,7 +27,7 @@ func (index *Index) Add(docs []crawler.Document) {
 	for _, doc := range docs {
 		foundTokens := tokens(doc.Title)
 		if foundTokens == nil {
-			return
+			continue
 		}
 
 		for _, token := range foundTokens {
@@ -45,7 +45,7 @@ func (index *Index) Search(token string) []int {
 
 // Разделение строки на лексемы.
 func tokens(s string) []string {
-	wordPattern := regexp.MustCompile("[\\p{L}\\d]+")
+	wordPattern := regexp.MustCompile(`[\p{L}\d]+`)
 	words := wordPattern.FindAllString(s, -1)
 	if words == nil {
 		return nil

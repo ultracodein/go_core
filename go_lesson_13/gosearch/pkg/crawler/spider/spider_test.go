@@ -39,9 +39,9 @@ func TestService_Scan(t *testing.T) {
 	srv := createFakeServer()
 	defer srv.Close()
 
-	s := New()
+	s := New(10)
 	url := srv.URL
-	got, _ := s.Scan(url, 3)
+	got, _ := s.Scan([]string{url}, 3)
 	want := []crawler.Document{
 		{
 			ID:    0,

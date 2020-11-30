@@ -92,10 +92,8 @@ func (gs *gosearch) initWithCache() error {
 // updateDataByScan обновляет индекс и хранилище, инициализирует поисковый движок,
 // сохраняет обновленные данные и состояние планировщика в файлы
 func (gs *gosearch) updateDataByScan(sites []string, ch chan error) {
-	fmt.Println("Идет сканирование сайтов. Пожалуйста, подождите...")
-
 	scanErrors, storeError := gs.updateIndexByScan(sites)
-	if scanErrors != nil && len(scanErrors) == len(sites) {
+	if len(scanErrors) == len(sites) {
 		ch <- errors.New("ни один из сайтов не отсканирован")
 		return
 	}
@@ -117,20 +115,20 @@ func (gs *gosearch) updateDataByScan(sites []string, ch chan error) {
 	ch <- nil
 }
 
-func getScannedSites(sites []string, scanErrors map[string]error) (scanned []string) {
+func getScannedSites(sites []string, scanErrors map[string]error) []string {
 	if scanErrors == nil {
-		scanned = sites
-	} else {
-		scanned := make([]string, 0)
-		errorSites := make([]string, 0, len(scanErrors))
+		return sites
+	}
 
-		for s := range scanErrors {
-			errorSites = append(errorSites, s)
-		}
-		for _, site := range sites {
-			if !spider.SliceContains(errorSites, site) {
-				scanned = append(scanned, site)
-			}
+	scanned := make([]string, 0)
+	errorSites := make([]string, 0, len(scanErrors))
+
+	for s := range scanErrors {
+		errorSites = append(errorSites, s)
+	}
+	for _, site := range sites {
+		if !spider.SliceContains(errorSites, site) {
+			scanned = append(scanned, site)
 		}
 	}
 	return scanned
@@ -139,7 +137,7 @@ func getScannedSites(sites []string, scanErrors map[string]error) (scanned []str
 // updateIndexByScan выполняет сканирование сайтов и индексирование данных
 func (gs *gosearch) updateIndexByScan(sites []string) (scanErrors map[string]error, storeError error) {
 	data, scanErrors := gs.scanner.Scan(sites, gs.depth)
-	if scanErrors != nil {
+	if data == nil {
 		return scanErrors, nil
 	}
 
@@ -175,7 +173,7 @@ func (gs *gosearch) saveCacheAndHistory(scanned []string) error {
 // new создаёт объект и службы сервера и возвращает указатель на него.
 func new() *gosearch {
 	gs := gosearch{}
-	gs.scanner = spider.New()
+	gs.scanner = spider.New(10)
 	gs.index = hash.New()
 	gs.storage = btstore.New()
 	gs.cacheFiles = map[string]string{
@@ -192,7 +190,11 @@ func new() *gosearch {
 func (gs *gosearch) initScheduler() *scheduler.Service {
 	s, err := scheduler.LoadFrom(gs.schedulerFile)
 	if err != nil {
-		sites := []string{"https://www.ixbt.com/", "https://cnews.ru/"}
+		sites := []string{
+			"https://www.ixbt.com", "https://cnews.ru", "https://www.hpe.com", "https://telegram.org", "https://www.oracle.com",
+			"https://www.python.org", "https://www.citrix.com", "https://www.microsoft.com", "https://www.gartner.com", "https://www.anaconda.com",
+			"http://cisco.com", "http://zoom.us", "https://www.tesla.com", "https://www.spacex.com", "https://www.formula1.com",
+		}
 		expdays := 3
 		log.Println("Планировщик не найден (инициализирован начальными значениями).")
 		return scheduler.New(sites, expdays)
