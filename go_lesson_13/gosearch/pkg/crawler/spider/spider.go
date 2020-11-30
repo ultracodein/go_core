@@ -79,7 +79,7 @@ func (s *Service) getThreadCount(urlCount int) int {
 	return threadCount
 }
 
-func (s *Service) scanThread(in chan string, out chan result, depth int, wg *sync.WaitGroup) {
+func (s *Service) scanThread(in <-chan string, out chan<- result, depth int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {
 		url, open := <-in
