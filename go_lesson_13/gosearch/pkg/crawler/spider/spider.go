@@ -3,11 +3,117 @@
 package spider
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"golang.org/x/net/html"
 )
+
+// Service - служба поискового робота.
+type Service struct {
+	maxThreads int
+}
+
+type result struct {
+	url  string
+	data []crawler.Document
+	err  error
+}
+
+// New - конструктор службы поискового робота.
+func New(maxThreads int) *Service {
+	s := Service{}
+	s.maxThreads = maxThreads
+	return &s
+}
+
+// Scan осуществляет обход сайтов в многопоточном режиме
+func (s *Service) Scan(urls []string, depth int) (data []crawler.Document, errors map[string]error) {
+	var wg sync.WaitGroup
+	in := make(chan string)
+	out := make(chan result)
+
+	// заполняем входной канал url
+	go func() {
+		for _, url := range urls {
+			in <- url
+		}
+	}()
+
+	// определяем число потоков и запускаем их
+	urlCount := len(urls)
+	count := s.getThreadCount(urlCount)
+	for i := 0; i < count; i++ {
+		wg.Add(1)
+		go s.scanThread(in, out, depth, &wg)
+	}
+
+	// читаем и обрабатываем результаты из выходного канала
+	errors = make(map[string]error)
+	for range urls {
+		res := <-out
+
+		if res.err != nil {
+			errors[res.url] = res.err
+			continue
+		}
+
+		data = append(data, res.data...)
+	}
+
+	close(in)
+	wg.Wait()
+
+	return data, errors
+}
+
+func (s *Service) getThreadCount(urlCount int) int {
+	threadCount := 0
+	if urlCount > s.maxThreads {
+		threadCount = s.maxThreads
+	} else {
+		threadCount = urlCount
+	}
+	return threadCount
+}
+
+func (s *Service) scanThread(in chan string, out chan result, depth int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for {
+		url, open := <-in
+		if !open {
+			return
+		}
+
+		fmt.Printf("Идет сканирование %s\n", url)
+		data, err := scanPage(url, depth)
+		out <- result{
+			url:  url,
+			data: data,
+			err:  err,
+		}
+	}
+}
+
+func scanPage(url string, depth int) (data []crawler.Document, err error) {
+	pages := make(map[string]string)
+
+	err = parse(url, url, depth, pages)
+	if err != nil {
+		return nil, err
+	}
+
+	for url, title := range pages {
+		item := crawler.Document{
+			URL:   url,
+			Title: title,
+		}
+		data = append(data, item)
+	}
+	return data, nil
+}
 
 // parse рекурсивно обходит ссылки на странице, переданной в url.
 // Глубина рекурсии задаётся в depth.
