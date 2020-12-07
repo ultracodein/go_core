@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strconv"
 )
 
 func main() {
@@ -24,42 +23,21 @@ func searchLoop(conn net.Conn) {
 	r := bufio.NewReader(conn)
 	for {
 		// получаем слово для поиска
-		var word string
+		word := ""
 		fmt.Scanln(&word)
 		if word == "" {
 			return
 		}
-		word += "\n"
 
 		// делаем поисковый запрос
-		_, err := conn.Write([]byte(word))
+		fmt.Fprintf(conn, word+"\n")
+
+		// считываем ответ
+		reply, err := r.ReadString('<')
 		if err != nil {
 			return
 		}
 
-		// считываем длину ответа
-		var lenPart []byte
-		for {
-			lenPart, _, err = r.ReadLine()
-			if err != nil {
-				return
-			}
-			if string(lenPart) != "" {
-				break
-			}
-		}
-		len, err := strconv.Atoi(string(lenPart))
-		if err != nil {
-			return
-		}
-
-		// зная длину, считываем текст ответа
-		textPart := make([]byte, len)
-		_, err = r.Read(textPart)
-		if err != nil {
-			return
-		}
-
-		fmt.Println(string(textPart))
+		fmt.Println(string(reply))
 	}
 }
