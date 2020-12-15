@@ -119,7 +119,7 @@ func TestAPI_createDocs(t *testing.T) {
 	}
 	got := (*api.storage).Doc(3)
 
-	if got == nil || !reflect.DeepEqual(*got, want) {
+	if !reflect.DeepEqual(*got, want) {
 		t.Errorf("документ не добавлен или добавлен некорректно: получили %v а хотели %v", got, want)
 	}
 }
