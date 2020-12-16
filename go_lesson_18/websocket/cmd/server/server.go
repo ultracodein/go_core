@@ -11,9 +11,9 @@ import (
 func main() {
 	router := mux.NewRouter()
 	upgrader := websocket.Upgrader{
-		//CheckOrigin: func(r *http.Request) bool {
-		//	return true
-		//},
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
 	}
 	secret := "password"
 

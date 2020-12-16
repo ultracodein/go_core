@@ -21,9 +21,10 @@ func main() {
 func send() {
 	r := bufio.NewReader(os.Stdin)
 	for {
-		msg, _ := r.ReadString('\n')
-		if msg == "\n" {
-			return
+		// получаем сообщение
+		msg, err := r.ReadString('\n')
+		if err != nil {
+			log.Fatalf("не удалось считать сообщение из stdin: %v", err)
 		}
 
 		// подключаемся
@@ -69,10 +70,8 @@ func messages() {
 		if err != nil {
 			log.Fatalf("не удалось прочитать сообщение от сервера: %v", err)
 		}
-		if string(message) != "" {
-			fmt.Printf("%s", message)
-		}
 
+		fmt.Printf("%s", message)
 		time.Sleep(time.Second)
 	}
 }
