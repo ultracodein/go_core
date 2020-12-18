@@ -19,6 +19,7 @@ func main() {
 
 	api := api.New(router, upgrader, secret)
 	api.Endpoints()
+	go api.ForwardMessages()
 
 	http.ListenAndServe(":8000", router)
 }
