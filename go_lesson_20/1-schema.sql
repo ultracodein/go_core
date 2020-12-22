@@ -63,7 +63,8 @@ CREATE TABLE movie_directors (
 	director_id BIGINT NOT NULL REFERENCES directors(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
--- функция-триггер для проверки уникальности названия фильма в рамках одного года 
+-- функция-триггер для проверки уникальности названия фильма в рамках одного года
+
 CREATE OR REPLACE FUNCTION check_unique_title_in_a_year()
 	RETURNS TRIGGER AS $$
 BEGIN
@@ -79,5 +80,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- регистрация тригера для таблицы
+
 CREATE TRIGGER check_unique_title_in_a_year BEFORE INSERT OR UPDATE ON movies 
 FOR EACH ROW EXECUTE PROCEDURE check_unique_title_in_a_year();
