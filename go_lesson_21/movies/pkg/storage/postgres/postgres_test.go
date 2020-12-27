@@ -79,7 +79,7 @@ func TestDB_MovieBulkAdd(t *testing.T) {
 		t.Errorf("был добавлен фильм %v, а хотели %v", got, want)
 	}
 
-	_ = db.MovieDelete(ctx, 4)
+	_ = db.MovieDelete(ctx, newMovie.ID)
 }
 
 func TestDB_MovieUpdate(t *testing.T) {
@@ -107,6 +107,7 @@ func TestDB_MovieDelete(t *testing.T) {
 	}
 	ids, _ := db.MovieBulkAdd(ctx, movies)
 	id := ids[0]
+	t.Logf("%v", ids)
 
 	_ = db.MovieDelete(ctx, id)
 

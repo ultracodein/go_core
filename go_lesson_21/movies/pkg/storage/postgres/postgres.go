@@ -49,9 +49,6 @@ func (db *DB) MovieBulkAdd(ctx context.Context, movies []storage.Movie) ([]int, 
 	defer tx.Rollback(ctx)
 
 	batch := new(pgx.Batch)
-	// реинициализируем автоинкремент для последовательности (1 запрос)
-	batch.Queue(`SELECT SETVAL('movies_id_seq', (SELECT MAX(id) FROM movies))`)
-	// выполняем вставку (N запросов)
 	for _, movie := range movies {
 		batch.Queue(
 			`INSERT INTO movies(title, release_year, studio_id, gross, rating) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
@@ -62,11 +59,10 @@ func (db *DB) MovieBulkAdd(ctx context.Context, movies []storage.Movie) ([]int, 
 			movie.Rating,
 		)
 	}
-
 	res := tx.SendBatch(ctx, batch)
 
 	var ids []int
-	for i := 1; i <= len(movies)+1; i++ {
+	for range movies {
 		var id int
 		err = res.QueryRow().Scan(&id)
 		if err != nil {
@@ -74,8 +70,6 @@ func (db *DB) MovieBulkAdd(ctx context.Context, movies []storage.Movie) ([]int, 
 		}
 		ids = append(ids, id)
 	}
-	// результат первого запроса (значение максимального id) нас не интересует
-	ids = ids[1:]
 
 	err = res.Close()
 	if err != nil {
@@ -116,7 +110,11 @@ func (db *DB) MovieUpdate(ctx context.Context, movie storage.Movie) error {
 func (db *DB) MovieGetAll(ctx context.Context, studioID int) ([]storage.Movie, error) {
 	rows, err := db.pool.Query(
 		ctx,
-		`SELECT * FROM select_movies_of_studio($1)`,
+		`SELECT * FROM movies WHERE studio_id = $1
+		OR studio_id IN (
+			SELECT DISTINCT studio_id FROM movies
+			WHERE studio_id <> $1 AND (SELECT $1) = 0
+		)`,
 		studioID,
 	)
 	if err != nil {
