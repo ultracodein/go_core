@@ -110,10 +110,11 @@ func (db *DB) MovieUpdate(ctx context.Context, movie storage.Movie) error {
 func (db *DB) MovieGetAll(ctx context.Context, studioID int) ([]storage.Movie, error) {
 	rows, err := db.pool.Query(
 		ctx,
-		`SELECT * FROM movies WHERE studio_id = $1
+		`SELECT * FROM movies
+		WHERE studio_id = $1
 		OR studio_id IN (
 			SELECT DISTINCT studio_id FROM movies
-			WHERE studio_id <> $1 AND (SELECT $1) = 0
+			WHERE (SELECT $1) = 0
 		)`,
 		studioID,
 	)
