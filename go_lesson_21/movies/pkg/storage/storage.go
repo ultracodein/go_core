@@ -1,5 +1,7 @@
 package storage
 
+import "context"
+
 // Movie - кинофильм
 type Movie struct {
 	ID          int
@@ -12,8 +14,8 @@ type Movie struct {
 
 // Interface определяет контракт хранилища данных.
 type Interface interface {
-	MovieBulkAdd(movies []Movie) ([]int, error)
-	MovieDelete(movieID int) error
-	MovieUpdate(movie Movie) error
-	MovieGetAll(studioID int) ([]Movie, error)
+	MovieBulkAdd(ctx context.Context, movies []Movie) ([]int, error)
+	MovieDelete(ctx context.Context, movieID int) error
+	MovieUpdate(ctx context.Context, movie Movie) error
+	MovieGetAll(ctx context.Context, studioID int) ([]Movie, error)
 }

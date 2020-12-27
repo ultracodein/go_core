@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"fmt"
 	"movies/pkg/storage"
 
 	"github.com/jackc/pgx/v4"
@@ -11,16 +10,14 @@ import (
 
 // DB - хранилище данных
 type DB struct {
-	ctx  context.Context
 	conn string
 	pool *pgxpool.Pool
 }
 
 // New - конструктор
-func New(ctx context.Context, conn string) *DB {
+func New(conn string) *DB {
 	db := DB{
 		conn: conn,
-		ctx:  ctx,
 		pool: nil,
 	}
 	return &db
@@ -28,7 +25,8 @@ func New(ctx context.Context, conn string) *DB {
 
 // Connect выполняет подключение к БД
 func (db *DB) Connect() error {
-	pool, err := pgxpool.Connect(db.ctx, db.conn)
+	ctx := context.Background()
+	pool, err := pgxpool.Connect(ctx, db.conn)
 	if err != nil {
 		return err
 	}
@@ -43,15 +41,17 @@ func (db *DB) Disconnect() {
 }
 
 // MovieBulkAdd сохраняет в БД массив фильмов
-func (db *DB) MovieBulkAdd(movies []storage.Movie) ([]int, error) {
-	tx, err := db.pool.Begin(db.ctx)
+func (db *DB) MovieBulkAdd(ctx context.Context, movies []storage.Movie) ([]int, error) {
+	tx, err := db.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback(db.ctx)
+	defer tx.Rollback(ctx)
 
 	batch := new(pgx.Batch)
+	// реинициализируем автоинкремент для последовательности (1 запрос)
 	batch.Queue(`SELECT SETVAL('movies_id_seq', (SELECT MAX(id) FROM movies))`)
+	// выполняем вставку (N запросов)
 	for _, movie := range movies {
 		batch.Queue(
 			`INSERT INTO movies(title, release_year, studio_id, gross, rating) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
@@ -63,9 +63,9 @@ func (db *DB) MovieBulkAdd(movies []storage.Movie) ([]int, error) {
 		)
 	}
 
-	res := tx.SendBatch(db.ctx, batch)
+	res := tx.SendBatch(ctx, batch)
 
-	ids := make([]int, 0)
+	var ids []int
 	for i := 1; i <= len(movies)+1; i++ {
 		var id int
 		err = res.QueryRow().Scan(&id)
@@ -74,25 +74,27 @@ func (db *DB) MovieBulkAdd(movies []storage.Movie) ([]int, error) {
 		}
 		ids = append(ids, id)
 	}
+	// результат первого запроса (значение максимального id) нас не интересует
+	ids = ids[1:]
 
 	err = res.Close()
 	if err != nil {
 		return nil, err
 	}
 
-	return ids[1:], tx.Commit(db.ctx)
+	return ids, tx.Commit(ctx)
 }
 
 // MovieDelete удаляет фильм
-func (db *DB) MovieDelete(movieID int) error {
-	_, err := db.pool.Exec(db.ctx, `DELETE FROM movies WHERE id = $1`, movieID)
+func (db *DB) MovieDelete(ctx context.Context, movieID int) error {
+	_, err := db.pool.Exec(ctx, `DELETE FROM movies WHERE id = $1`, movieID)
 	return err
 }
 
 // MovieUpdate обновляет фильм
-func (db *DB) MovieUpdate(movie storage.Movie) error {
+func (db *DB) MovieUpdate(ctx context.Context, movie storage.Movie) error {
 	_, err := db.pool.Exec(
-		db.ctx,
+		ctx,
 		`UPDATE movies
 		SET title = $2,
 		release_year = $3,
@@ -111,13 +113,12 @@ func (db *DB) MovieUpdate(movie storage.Movie) error {
 }
 
 // MovieGetAll возвращает все фильмы студии
-func (db *DB) MovieGetAll(studioID int) ([]storage.Movie, error) {
-	query := `SELECT id, title, release_year, studio_id, gross, rating FROM movies`
-	if studioID > 0 {
-		query += fmt.Sprintf(` WHERE studio_id = %d`, studioID)
-	}
-
-	rows, err := db.pool.Query(db.ctx, query)
+func (db *DB) MovieGetAll(ctx context.Context, studioID int) ([]storage.Movie, error) {
+	rows, err := db.pool.Query(
+		ctx,
+		`SELECT * FROM select_movies_of_studio($1)`,
+		studioID,
+	)
 	if err != nil {
 		return nil, err
 	}
