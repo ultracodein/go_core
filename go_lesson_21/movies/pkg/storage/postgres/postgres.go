@@ -108,16 +108,7 @@ func (db *DB) MovieUpdate(ctx context.Context, movie storage.Movie) error {
 
 // MovieGetAll возвращает все фильмы студии
 func (db *DB) MovieGetAll(ctx context.Context, studioID int) ([]storage.Movie, error) {
-	rows, err := db.pool.Query(
-		ctx,
-		`SELECT * FROM movies
-		WHERE studio_id = $1
-		OR studio_id IN (
-			SELECT DISTINCT studio_id FROM movies
-			WHERE (SELECT $1) = 0
-		)`,
-		studioID,
-	)
+	rows, err := db.pool.Query(ctx, `SELECT * FROM movies WHERE studio_id = $1 OR $1 = 0`, studioID)
 	if err != nil {
 		return nil, err
 	}
